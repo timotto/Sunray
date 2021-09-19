@@ -1226,10 +1226,17 @@ void trackLine(){
   else {
     // line control (stanley)    
     bool straight = maps.nextPointIsStraight();
+#if USE_LINEAR_SPEED_RAMP
+    // linear speed ramp needs more distance to stop at high speeds
+    const float closeToTargetLimit = 1.5 * setSpeed;
+#else
+    const float closeToTargetLimit = 0.5;
+#endif
+    const bool closeToTargetPoint = maps.distanceToTargetPoint(stateX, stateY) < closeToTargetLimit;
     if (maps.trackSlow) {
       // planner forces slow tracking (e.g. docking etc)
       linear = 0.1;           
-    } else if (     ((setSpeed > 0.2) && (maps.distanceToTargetPoint(stateX, stateY) < 0.5) && (!straight))   // approaching
+    } else if (     ((setSpeed > 0.2) && closeToTargetPoint && (!straight))   // approaching
           || ((linearMotionStartTime != 0) && (millis() < linearMotionStartTime + 3000))                      // leaving  
        ) 
     {
