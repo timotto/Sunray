@@ -14,8 +14,8 @@ volatile int odomTicksLeft  = 0;
 volatile int odomTicksRight = 0;
 
 
-volatile bool leftPressed = false;
-volatile bool rightPressed = false;
+volatile uint32_t leftTriggeredSince = 0;
+volatile uint32_t rightTriggeredSince = 0;
 
 
 bool faultActive  = LOW; 
@@ -274,11 +274,11 @@ void AmBatteryDriver::keepPowerOn(bool flag){
 
 // ------------------------------------------------------------------------------------
 void BumperLeftInterruptRoutine(){
-  leftPressed = (digitalRead(pinBumperLeft) == LOW);  
+  leftTriggeredSince = digitalRead(pinBumperLeft) == LOW ? millis() : 0;
 }
 
 void BumperRightInterruptRoutine(){
-  rightPressed = (digitalRead(pinBumperRight) == LOW);  
+  rightTriggeredSince = digitalRead(pinBumperRight) == LOW ? millis() : 0;
 }
 
 
@@ -290,14 +290,18 @@ void AmBumperDriver::begin(){
 }
 
 void AmBumperDriver::getTriggeredBumper(bool &leftBumper, bool &rightBumper){
-  leftBumper = leftPressed;
-  rightBumper = rightPressed;
+  const uint32_t now = millis();
+  leftBumper = leftTriggeredSince != 0 && (now - leftTriggeredSince) > triggerTime;
+  rightBumper = rightTriggeredSince != 0 && (now - rightTriggeredSince) > triggerTime;
 }
 
 bool AmBumperDriver::obstacle(){
-  return (leftPressed || rightPressed);
+  bool left, right;
+  getTriggeredBumper(left, right);
+
+  return left || right;
 }
-    
+
 
 void AmBumperDriver::run(){  
 }

@@ -59,7 +59,7 @@ MPU9250_DMP imu;
   AmRobotDriver robotDriver;
   AmMotorDriver motorDriver(MOTOR_DRIVER_MIN_PWM);
   AmBatteryDriver batteryDriver;
-  AmBumperDriver bumper;
+  AmBumperDriver bumper(2000);
   AmStopButtonDriver stopButton;
   AmRainSensorDriver rainDriver;
 #endif
