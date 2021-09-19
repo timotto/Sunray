@@ -99,10 +99,8 @@ void Motor::speedPWM ( int pwmLeft, int pwmRight, int pwmMow )
 }
 
 float applyRamp(float current, float desired) {
-  // different ramps for full stop or other speeds
-  const float total_ramp_duration = desired == 0 ? MOTOR_SPEED_STOP_TIME : MOTOR_SPEED_RAMP_TIME;
   // maximum allowed delta per step
-  const float max_delta = (float)MOTOR_CONTROL_INTERVAL / total_ramp_duration;
+  const float max_delta = (float)MOTOR_CONTROL_INTERVAL / (float)MOTOR_SPEED_RAMP_TIME;
   // actual delta, signed
   const float delta = desired - current;
   // final ramp step

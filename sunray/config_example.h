@@ -139,7 +139,6 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 //#define USE_LINEAR_SPEED_RAMP  true      // use a speed ramp for the linear speed
 #define USE_LINEAR_SPEED_RAMP  false      // do not use a speed ramp 
 #define MOTOR_SPEED_RAMP_TIME   10000      // duration for acceleration from stop to 1m/s.
-#define MOTOR_SPEED_STOP_TIME   1000       // duration for acceleration 1m/s to full stop. High values make to robot overshoot at curves.
 
 // motor speed control (PID coefficients) - these values are tuned for Ardumower motors
 // general information about PID controllers: https://wiki.ardumower.de/index.php?title=PID_control
