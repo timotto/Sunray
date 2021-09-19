@@ -37,49 +37,21 @@ send BLE test packet          AT+TEST\r\n                     +TEST\r\n
 connect to wifi               AT+WIFImode,ssid,pass\r\n       +WIFI=mode,ssid,pass\r\n
 */
 
-// ---------- configuration ----------------------------------
+#include "config.h"
+
 #define VERSION "ESP32 firmware V0.2.4,Bluetooth V4.0 LE"
-#define NAME "Ardumower"
-#define BLE_MTU 20   // max. transfer bytes per BLE frame
-
-#define BLE_MIN_INTERVAL 2    // connection parameters (tuned for high speed/high power consumption - see: https://support.ambiq.com/hc/en-us/articles/115002907792-Managing-BLE-Connection-Parameters)
-#define BLE_MAX_INTERVAL 10
-#define BLE_LATENCY      0
-#define BLE_TIMEOUT      30  
-
-
-//IP WiFi:
-//#define WIFI_STATIC_IP true  // activate this for static IP
-#define WIFI_STATIC_IP false // activate this for dynamic IP
 
 // configure below IPs if using static IP
-IPAddress av_local_IP(10,0,100,11);
-IPAddress av_gateway(10,0,100,1);
-IPAddress av_subnet(255, 255, 255, 0);
-IPAddress av_primaryDNS(8, 8, 8, 8); //optional
-IPAddress av_secondaryDNS(8, 8, 4, 4); //optional
+IPAddress av_local_IP(WIFI_STATIC_IP_LOCAL);
+IPAddress av_gateway(WIFI_STATIC_IP_GW);
+IPAddress av_subnet(WIFI_STATIC_IP_SUBNET);
+IPAddress av_primaryDNS(WIFI_STATIC_IP_DNS1); //optional
+IPAddress av_secondaryDNS(WIFI_STATIC_IP_DNS2); //optional
       
-String ssid = "yourSSID";  // WiFi SSID      (leave empty ("") to not use WiFi)
-String pass = "yourPASSWORD";  // WiFi password  (leave empty ("") to not use WiFi)
-
-#define WIFI_TIMEOUT_FIRST_RESPONSE  800   // fast response times (500), for more reliable choose: 800     
-#define WIFI_TIMEOUT_RESPONSE        400    // fast response times (100), for more reliable choose: 400
+String ssid = WIFI_STA_SSID;
+String pass = WIFI_STA_PSK;
 
 // -----------------------------------------------------------
-
-#define pinGpioRx   16    // UART2 / GPIO16 / IO16
-#define pinGpioTx   17    // UART2 / GPIO17 / IO17
-
-//#define pinGpioRx   9   // UART1 / GPIO9  / SD2
-//#define pinGpioTx   10  // UART1 / GPIO10 / SD3
-
-//#define pinGpioRx   3   // UART0 / GPIO3  / RXD0
-//#define pinGpioTx   1   // UART0 / GPIO1  / TXD0
-
-#define pinLED   2
-
-#define CONSOLE Serial  // where to send/receive console messages for debugging etc.
-#define UART Serial2    // where to send/receive UART data
 
 #include <WiFi.h>
 #include <BLEDevice.h>
@@ -90,7 +62,9 @@ String pass = "yourPASSWORD";  // WiFi password  (leave empty ("") to not use Wi
 #include <ESPmDNS.h>
 #include <WiFiUdp.h>
 #include <ArduinoOTA.h>
+#include "src/adapter.h"
 
+ArduMower::Adapter mower(UART, ENCRYPTION_PASSWORD, ENCRYPTION_ENABLED);
 
 String cmd;
 unsigned long nextInfoTime = 0;
@@ -140,6 +114,9 @@ void uartSend(String s){
   CONSOLE.println(s);
   UART.print(s);
   UART.print("\r\n");  
+  mower.tx(s);
+  String crlf = "\r\n";
+  mower.tx(crlf);
 }
 
 // ------------------------------- BLE -----------------------------------------------------
@@ -352,10 +329,12 @@ void httpServer(){
           CONSOLE.println(cmd);
           String cmdResponse;
           UART.print(cmd);
+          mower.tx(cmd);
           timeout = millis() + WIFI_TIMEOUT_FIRST_RESPONSE; 
           while ( millis() < timeout){
             if (UART.available()){
               char ch = UART.read();
+              mower.rx(ch);
               cmdResponse += ch;
               timeout = millis() + WIFI_TIMEOUT_RESPONSE;  
             }
@@ -488,10 +467,12 @@ void setup() {
 
   startBLE();
   //startWIFI();
+  mqtt_setup();
 }
 
 
 void loop() {     
+  mower.loop(millis());
   // -------- BLE -----------------------------  
   // disconnecting
   if (!bleConnected && oldBleConnected) {
@@ -522,6 +503,7 @@ void loop() {
   // UART receive   
   while (UART.available()){    
     char ch = UART.read();          
+    mower.rx(ch);
     if (bleConnected){
       // BLE client connected
       bleAnswerTimeout = millis() + 100;
@@ -566,6 +548,7 @@ void loop() {
     char ch = rxBuf[rxReadPos];
     s += ch;
     UART.write(ch);
+    mower.tx(ch);
     rxReadPos = (rxReadPos + 1) % BLE_BUF_SZ;	
     num++;
   }
@@ -597,7 +580,5 @@ void loop() {
 
   startWIFI();
   ArduinoOTA.handle();
-
+  mqtt_loop();
 }
-
-
