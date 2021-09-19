@@ -10,6 +10,7 @@
 #include "Arduino.h"
 
 
+#define MOTOR_CONTROL_INTERVAL    50
 
 
 void Motor::begin() {
@@ -56,7 +57,6 @@ void Motor::begin() {
   motorMowSenseLP = 0;  
   motorsSenseLP = 0;
 
-  activateLinearSpeedRamp = USE_LINEAR_SPEED_RAMP;
   linearSpeedSet = 0;
   angularSpeedSet = 0;
   motorLeftRpmSet = 0;
@@ -98,6 +98,23 @@ void Motor::speedPWM ( int pwmLeft, int pwmRight, int pwmMow )
   motorDriver.setMotorPwm(pwmLeft, pwmRight, pwmMow);
 }
 
+float applyRamp(float current, float desired) {
+  // different ramps for full stop or other speeds
+  const float total_ramp_duration = desired == 0 ? MOTOR_SPEED_STOP_TIME : MOTOR_SPEED_RAMP_TIME;
+  // maximum allowed delta per step
+  const float max_delta = (float)MOTOR_CONTROL_INTERVAL / total_ramp_duration;
+  // actual delta, signed
+  const float delta = desired - current;
+  // final ramp step
+  if (fabs(delta) <= max_delta) return desired;
+
+  // apply max_delta with correct sign
+  const float direction = delta >= 0 ? 1 : -1;
+  const float change = direction * max_delta;
+
+  return current + change;
+}
+
 // linear: m/s
 // angular: rad/s
 // -------unicycle model equations----------
@@ -110,11 +127,7 @@ void Motor::speedPWM ( int pwmLeft, int pwmRight, int pwmMow )
 void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRamp){
    setLinearAngularSpeedTimeout = millis() + 1000;
    setLinearAngularSpeedTimeoutActive = true;
-   if ((activateLinearSpeedRamp) && (useLinearRamp)) {
-     linearSpeedSet = 0.9 * linearSpeedSet + 0.1 * linear;
-   } else {
-     linearSpeedSet = linear;
-   }
+   linearSpeedSet = (USE_LINEAR_SPEED_RAMP && useLinearRamp) ? applyRamp(linearSpeedSet, linear) : linear;
    angularSpeedSet = angular;   
    float rspeed = linearSpeedSet + angularSpeedSet * (wheelBaseCm /100.0 /2);          
    float lspeed = linearSpeedSet - angularSpeedSet * (wheelBaseCm /100.0 /2);          
@@ -163,7 +176,7 @@ void Motor::stopImmediately(bool includeMowerMotor){
 
 
 void Motor::run() {
-  if (millis() < lastControlTime + 50) return;
+  if (millis() < lastControlTime + MOTOR_CONTROL_INTERVAL) return;
   
   if (setLinearAngularSpeedTimeoutActive){
     if (millis() > setLinearAngularSpeedTimeout){
