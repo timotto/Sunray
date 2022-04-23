@@ -14,8 +14,8 @@ volatile int odomTicksLeft  = 0;
 volatile int odomTicksRight = 0;
 
 
-volatile uint32_t leftTriggeredSince = 0;
-volatile uint32_t rightTriggeredSince = 0;
+volatile bool leftPressed = false;
+volatile bool rightPressed = false;
 
 
 bool faultActive  = LOW; 
@@ -46,7 +46,7 @@ void OdometryRightISR(){
   odomTicksRight++;  
 }
 
-AmMotorDriver::AmMotorDriver(int _motorMinPwm, int _mowerMinPwm) : motorMinPwm(_motorMinPwm), mowerMinPwm(_mowerMinPwm) {
+AmMotorDriver::AmMotorDriver(){
 }
     
 
@@ -128,26 +128,27 @@ void AmMotorDriver::setMC33926(int pinDir, int pinPWM, int speed) {
 // IN1 PinPWM         IN2 PinDir
 // PWM                L     Forward
 // PWM                H     Reverse
-// minPwm verhindert, dass das PWM Signal 0 wird. Manche Driver brauchen einen kurzen Impuls, um das PWM zu erkennen.
-// Wenn der z.B. vom max. PWM Wert auf 0 bzw. das Signal auf Low geht, behalten diese den vorherigen Wert bei und der Motor stoppt nicht.
-void AmMotorDriver::setBrushless(int pinDir, int pinPWM, int speed, int minPwm) {
+// verhindert dass das PWM Signal 0 wird. Der Driver braucht einen kurzen Impuls um das PWM zu erkennen.
+// Wenn der z.B. vom max. PWM Wert auf 0 bzw. das Signal auf Low geht, behält er den vorherigen Wert bei und der Motor stoppt nicht
+void AmMotorDriver::setBrushless(int pinDir, int pinPWM, int speed) {
   //DEBUGLN(speed);
-  digitalWrite(pinDir, speed < 0 ? HIGH : LOW);
-  pinMan.analogWrite(pinPWM, (byte) max(minPwm, abs(speed)) );
+  if (speed < 0) {
+    digitalWrite(pinDir, HIGH) ;
+    if (speed >= -2) speed = -2;                         
+    pinMan.analogWrite(pinPWM, ((byte)abs(speed)));      
+  } else {
+    digitalWrite(pinDir, LOW) ;
+    if (speed <= 2) speed = 2;                           
+    pinMan.analogWrite(pinPWM, ((byte)abs(speed)));      
+  }
 }
 
     
 void AmMotorDriver::setMotorPwm(int leftPwm, int rightPwm, int mowPwm){
-  if (leftPwm == 0 && rightPwm == 0 && mowPwm == 0) {
-    digitalWrite(pinMotorEnable, !enableActive);
-  } else {
-    digitalWrite(pinMotorEnable, enableActive);
-  }
-
   #ifdef MOTOR_DRIVER_BRUSHLESS
-    setBrushless(pinMotorLeftDir, pinMotorLeftPWM, leftPwm, motorMinPwm);
-    setBrushless(pinMotorRightDir, pinMotorRightPWM, rightPwm, motorMinPwm);
-    setBrushless(pinMotorMowDir, pinMotorMowPWM, mowPwm, mowerMinPwm);
+    setBrushless(pinMotorLeftDir, pinMotorLeftPWM, leftPwm);
+    setBrushless(pinMotorRightDir, pinMotorRightPWM, rightPwm);
+    setBrushless(pinMotorMowDir, pinMotorMowPWM, mowPwm);
   #else
     setMC33926(pinMotorLeftDir, pinMotorLeftPWM, leftPwm);
     setMC33926(pinMotorRightDir, pinMotorRightPWM, rightPwm);
@@ -280,11 +281,11 @@ void AmBatteryDriver::keepPowerOn(bool flag){
 
 // ------------------------------------------------------------------------------------
 void BumperLeftInterruptRoutine(){
-  leftTriggeredSince = digitalRead(pinBumperLeft) == LOW ? millis() : 0;
+  leftPressed = (digitalRead(pinBumperLeft) == LOW);  
 }
 
 void BumperRightInterruptRoutine(){
-  rightTriggeredSince = digitalRead(pinBumperRight) == LOW ? millis() : 0;
+  rightPressed = (digitalRead(pinBumperRight) == LOW);  
 }
 
 
@@ -296,18 +297,14 @@ void AmBumperDriver::begin(){
 }
 
 void AmBumperDriver::getTriggeredBumper(bool &leftBumper, bool &rightBumper){
-  const uint32_t now = millis();
-  leftBumper = leftTriggeredSince != 0 && (now - leftTriggeredSince) > triggerTime;
-  rightBumper = rightTriggeredSince != 0 && (now - rightTriggeredSince) > triggerTime;
+  leftBumper = leftPressed;
+  rightBumper = rightPressed;
 }
 
 bool AmBumperDriver::obstacle(){
-  bool left, right;
-  getTriggeredBumper(left, right);
-
-  return left || right;
+  return (leftPressed || rightPressed);
 }
-
+    
 
 void AmBumperDriver::run(){  
 }
