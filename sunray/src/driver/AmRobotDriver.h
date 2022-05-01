@@ -24,6 +24,7 @@ class AmMotorDriver: public MotorDriver {
   private:
     int motorMinPwm;
     int mowerMinPwm;
+    uint32_t lastTimeMotorActive;
   public:    
     AmMotorDriver(int _motorMinPwm, int _mowerMinPwm);
     void begin() override;
