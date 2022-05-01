@@ -145,7 +145,12 @@ void AmMotorDriver::setBrushless(int pinDir, int pinPWM, int speed) {
 
     
 void AmMotorDriver::setMotorPwm(int leftPwm, int rightPwm, int mowPwm){
-  if (leftPwm == 0 && rightPwm == 0 && mowPwm == 0) {
+  const uint32_t now = millis();
+  if (leftPwm > 0 || rightPwm > 0 || mowPwm > 0) {
+    lastTimeMotorActive = now;
+  }
+  const uint32_t motorIdleTime = now - lastTimeMotorActive;
+  if (motorIdleTime > 10000) {
     digitalWrite(pinMotorEnable, !enableActive);
   } else {
     digitalWrite(pinMotorEnable, enableActive);

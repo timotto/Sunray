@@ -21,6 +21,8 @@ class AmRobotDriver {
 
 
 class AmMotorDriver: public MotorDriver {
+  private:
+    uint32_t lastTimeMotorActive;
   public:    
     AmMotorDriver();
     void begin() override;
