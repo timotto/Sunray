@@ -170,6 +170,7 @@ unsigned long imuDataTimeout = 0;
 unsigned long nextSaveTime = 0;
 bool imuFound = false;
 float lastIMUYaw = 0; 
+float imuYawRate = 0; // radians per second
 
 bool wifiFound = false;
 char ssid[] = WIFI_SSID;      // your network SSID (name)
@@ -641,6 +642,7 @@ void readIMU(){
     return;
   } 
   
+  static bool was_avail = false;
   if (avail) {        
     //CONSOLE.println("fifoAvailable");
     // Use dmpUpdateFifo to update the ax, gx, mx, etc. values
@@ -683,6 +685,12 @@ void readIMU(){
         }           
       #endif
       motor.robotPitch = scalePI(imu.pitch);
+      static float last_imu_yaw = 0;
+      if (was_avail) {
+        // interval time is 150ms == 0.15 seconds
+        imuYawRate = (imu.yaw - last_imu_yaw) / 0.15;
+      }
+      last_imu_yaw = imu.yaw;
       imu.yaw = scalePI(imu.yaw);
       //CONSOLE.println(imu.yaw / PI * 180.0);
       lastIMUYaw = scalePI(lastIMUYaw);
@@ -695,7 +703,10 @@ void readIMU(){
       lastIMUYaw = imu.yaw;      
       imuDataTimeout = millis() + 10000;
     }     
-  }     
+    was_avail = true;
+  } else {
+    was_avail = false;
+  }    
 }
 
 // check for RTC module
@@ -1115,6 +1126,20 @@ bool detectObstacle(){
     lastGPSMotionX = stateX;      
     lastGPSMotionY = stateY;      
   }    
+
+  if (imuFound && OBSTACLE_MAX_YAW_RATE_ERROR > 0) {
+    float desiredLinearSpeed, desiredYawRate;
+    motor.getLinearAngularSpeed(desiredLinearSpeed, desiredYawRate);
+    if (desiredLinearSpeed > 0.1) {
+      desiredAngularSpeed = desiredAngularSpeed;
+      const float yawRateError = fabs(desiredAngularSpeed - imuYawRate) * 180.0 / PI;
+      if (yawRateError > OBSTACLE_MAX_YAW_RATE_ERROR) {
+        triggerObstacle();
+        return true;
+      }
+    }
+  }
+
   return false;
 }
 

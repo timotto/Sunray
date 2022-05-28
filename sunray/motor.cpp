@@ -129,6 +129,11 @@ void Motor::setLinearAngularSpeed(float linear, float angular, bool useLinearRam
    CONSOLE.println(motorRightRpmSet);   */
 }
 
+void Motor::getLinearAngularSpeed(float & linear, float & angular){
+  linear = linearSpeedSet;
+  angular = angularSpeedSet;
+}
+
 void Motor::setMowState(bool switchOn){
   if ((enableMowMotor) && (switchOn)){
     if (abs(motorMowPWMSet) > 0) return; // mowing motor already switch ON

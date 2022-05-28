@@ -319,6 +319,12 @@ Also, you may choose the serial port below for serial monitor output (CONSOLE).
 #define KIDNAP_DETECT_ALLOWED_PATH_TOLERANCE 1.0  // allowed path tolerance (m) 
 
 
+// detect obstacle through sudden yaw rate error
+// when the robot drives close to the fence and hits a pole with the right side it suddenly turns to the right
+// set to 0 to disable
+#define OBSTACLE_MAX_YAW_RATE_ERROR 200 // degrees per second
+
+
 // drive curves smoothly?
 //#define SMOOTH_CURVES  true
 #define SMOOTH_CURVES  false
