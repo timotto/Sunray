@@ -162,12 +162,12 @@ void AmMotorDriver::setMotorPwm(int leftPwm, int rightPwm, int mowPwm){
 
 
 void AmMotorDriver::getMotorFaults(bool &leftFault, bool &rightFault, bool &mowFault){ 
-  if (digitalRead(pinMotorLeftFault) == faultActive) {
-    leftFault = true;
-  }
-  if  (digitalRead(pinMotorRightFault) == faultActive) {
-    rightFault = true;
-  }
+  // if (digitalRead(pinMotorLeftFault) == faultActive) {
+  //   leftFault = true;
+  // }
+  // if  (digitalRead(pinMotorRightFault) == faultActive) {
+  //   rightFault = true;
+  // }
   if (digitalRead(pinMotorMowFault) == faultActive) {
     mowFault = true;
   }
