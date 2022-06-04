@@ -1131,8 +1131,7 @@ bool detectObstacle(){
     float desiredLinearSpeed, desiredYawRate;
     motor.getLinearAngularSpeed(desiredLinearSpeed, desiredYawRate);
     if (desiredLinearSpeed > 0.1) {
-      desiredAngularSpeed = desiredAngularSpeed;
-      const float yawRateError = fabs(desiredAngularSpeed - imuYawRate) * 180.0 / PI;
+      const float yawRateError = fabs(desiredYawRate - imuYawRate) * 180.0 / PI;
       if (yawRateError > OBSTACLE_MAX_YAW_RATE_ERROR) {
         triggerObstacle();
         return true;
